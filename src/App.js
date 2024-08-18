@@ -1,10 +1,10 @@
 import React from 'react';
-import NewsApp from './NewsApp'; // Uvezi NewsApp komponentu
+import NewsApp from './NewsApp';
 
 function App() {
   return (
     <div className="App">
-      <NewsApp /> {/* Prikazuj NewsApp komponentu */}
+      <NewsApp /> {}
     </div>
   );
 }
