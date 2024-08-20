@@ -2,28 +2,28 @@
   font-family: Arial, sans-serif;
   text-align: center;
   margin: 20px;
-  background: linear-gradient(to left, #ffffff, #f7fbf9);; /* Gradient from white at the top to light green at the bottom */
+  background: linear-gradient(to left, #ffffff, #f7fbf9);
   padding: 20px;
   min-height: 100vh;
 }
 
 .header {
   display: flex;
-  align-items: center; /* Align items vertically */
-  justify-content: center; /* Center horizontally */
+  align-items: center;
+  justify-content: center;
   margin-bottom: 20px;
 }
 
 .header-icon {
-  font-size: 3rem; /* Size of the icon */
-  color: #28a745; /* Green color for the icon */
-  margin-right: 10px; /* Space between the icon and the title */
+  font-size: 3rem;
+  color: #28a745;
+  margin-right: 10px;
 }
 
 .header-title {
-  font-family: 'Arial Black', sans-serif; /* Bold font for the title */
+  font-family: 'Arial Black', sans-serif; 
   font-size: 2.5rem;
-  color: #28a745; /* Green color for the title */
+  color: #28a745;
 }
 
 .news-container {

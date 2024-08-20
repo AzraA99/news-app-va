@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { FaMicrophone, FaStop, FaRocket } from 'react-icons/fa'; // Added FaRocket for the icon
+import { FaMicrophone, FaStop, FaRocket } from 'react-icons/fa';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import './NewsApp.css';
 
-// Import your images
 import newsImage1 from './images/news1.jpg';
 import newsImage2 from './images/news2.jpg';
 import newsImage3 from './images/news3.jpg';
@@ -15,6 +14,7 @@ import newsImage8 from './images/news8.png';
 
 const NewsApp = () => {
   const [listening, setListening] = useState(false);
+  const [openedArticle, setOpenedArticle] = useState(null);
   const { transcript, resetTranscript } = useSpeechRecognition();
   const headlines = [
     {
@@ -71,11 +71,9 @@ const NewsApp = () => {
       window.speechSynthesis.cancel();
     } else if (lowerCaseTranscript.startsWith('open article')) {
       const articleNumber = parseInt(lowerCaseTranscript.split(' ')[2], 10);
-      if (!isNaN(articleNumber) && articleNumber > 0 && articleNumber <= headlines.length) {
-        window.open(headlines[articleNumber - 1].url, '_blank');
-      }
+      openArticle(articleNumber);
     }
-  }, [transcript, headlines]);
+  }, [transcript, headlines, openedArticle]);
 
   const startListening = () => {
     setListening(true);
@@ -100,17 +98,43 @@ const NewsApp = () => {
     });
   };
 
-  const speak = (text) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'hr-HR';
-    window.speechSynthesis.speak(utterance);
+  const speak = async (text) => {
+    try {
+      const response = await fetch('http://localhost:3002/synthesize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to synthesize speech');
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audio.play();
+    } catch (error) {
+      console.error('Failed to synthesize speech', error);
+    }
+  };
+
+  const openArticle = (articleNumber) => {
+    if (openedArticle === articleNumber) {
+      return;
+    }
+
+    if (!isNaN(articleNumber) && articleNumber > 0 && articleNumber <= headlines.length) {
+      window.open(headlines[articleNumber - 1].url, '_blank');
+      setOpenedArticle(articleNumber);
+    }
   };
 
   return (
     <div className="news-app">
       <div className="header">
-        <FaRocket className="header-icon" /> {/* Icon next to the title */}
-        <h1 className="header-title">Techna AI</h1> {/* Apply class for title */}
+        <FaRocket className="header-icon" /> {}
+        <h1 className="header-title">Techna AI</h1> {}
       </div>
       <div className="news-container">
         {headlines.map((headline, index) => (
