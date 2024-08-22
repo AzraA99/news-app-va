@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { FaMicrophone, FaStop, FaRocket } from 'react-icons/fa';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import './NewsApp.css';
 
+// Import your images
 import newsImage1 from './images/news1.jpg';
 import newsImage2 from './images/news2.jpg';
 import newsImage3 from './images/news3.jpg';
@@ -16,6 +18,7 @@ const NewsApp = () => {
   const [listening, setListening] = useState(false);
   const [openedArticle, setOpenedArticle] = useState(null);
   const { transcript, resetTranscript } = useSpeechRecognition();
+
   const headlines = [
     {
       title: "Na Pešterskoj visoravni nema vode ni za ljude ni za životinje",
@@ -86,36 +89,53 @@ const NewsApp = () => {
     resetTranscript();
   };
 
-  const readHeadlinesAloud = () => {
+  const speakWithApiHub = async (text) => {
+    try {
+      const response = await axios.post(
+        'https://api.apyhub.com/tts/file',
+        null,
+        {
+          headers: {
+            'apy-token': process.env.REACT_APP_APYHUB_API_KEY,
+          },
+          params: {
+            text: text,
+            lang: 'hr',
+            gender: 'male',
+          }
+        }
+      );
+
+      const audio = new Audio(response.data.url);
+      audio.play();
+    } catch (error) {
+      if (error.response) {
+        if (error.response.status === 429) {
+          console.error('Rate limit exceeded. Please try again later.');
+        } else if (error.response.status === 400) {
+          console.error('Bad Request: Check your API parameters.');
+        } else {
+          console.error('Error using ApiHub TTS:', error.response.status, error.response.data);
+        }
+      } else if (error.request) {
+        console.error('No response from ApiHub:', error.request);
+      } else {
+        console.error('Error setting up the request:', error.message);
+      }
+    }
+  };
+
+  const readHeadlinesAloud = async () => {
     if (headlines.length === 0) {
       console.log('No headlines to read');
       return;
     }
 
-    headlines.forEach((headline) => {
-      console.log('Reading:', headline.title);
-      speak(headline.title);
-    });
-  };
-
-  const speak = async (text) => {
-    try {
-      const response = await fetch('http://localhost:3002/synthesize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to synthesize speech');
-      }
-
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      audio.play();
-    } catch (error) {
-      console.error('Failed to synthesize speech', error);
+    for (let i = 0; i < headlines.length; i++) {
+      console.log('Reading:', headlines[i].title);
+      await speakWithApiHub(headlines[i].title);
+      
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
   };
 
