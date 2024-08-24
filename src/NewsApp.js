@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { FaMicrophone, FaStop, FaRocket } from 'react-icons/fa';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+import axios from 'axios';
 import './NewsApp.css';
 
 // Import your images
@@ -13,6 +13,8 @@ import newsImage5 from './images/news5.jpg';
 import newsImage6 from './images/news6.jpeg';
 import newsImage7 from './images/news7.jpg';
 import newsImage8 from './images/news8.png';
+
+const apiKey = process.env.REACT_APP_GOOGLE_CLOUD_API_KEY; // Access the API key
 
 const NewsApp = () => {
   const [listening, setListening] = useState(false);
@@ -63,16 +65,13 @@ const NewsApp = () => {
   ];
 
   useEffect(() => {
-    console.log('Transcript:', transcript);
-
     const lowerCaseTranscript = transcript.toLowerCase();
 
-    if (lowerCaseTranscript.includes('start reading')) {
-      console.log('Command "start reading" detected');
+    if (lowerCaseTranscript.includes('start')) {
       readHeadlinesAloud();
     } else if (lowerCaseTranscript.includes('stop')) {
       window.speechSynthesis.cancel();
-    } else if (lowerCaseTranscript.startsWith('open article')) {
+    } else if (lowerCaseTranscript.startsWith('otvori vijest')) {
       const articleNumber = parseInt(lowerCaseTranscript.split(' ')[2], 10);
       openArticle(articleNumber);
     }
@@ -89,39 +88,28 @@ const NewsApp = () => {
     resetTranscript();
   };
 
-  const speakWithApiHub = async (text) => {
+  const speak = async (text) => {
+    const requestBody = {
+      input: { text: text },
+      voice: { languageCode: 'sr-RS', name: 'sr-RS-Standard-A' },
+      audioConfig: { audioEncoding: 'MP3' }
+    };
+
     try {
       const response = await axios.post(
-        'https://api.apyhub.com/tts/file',
-        null,
-        {
-          headers: {
-            'apy-token': process.env.REACT_APP_APYHUB_API_KEY,
-          },
-          params: {
-            text: text,
-            lang: 'hr',
-            gender: 'male',
-          }
-        }
+        `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
+        requestBody
       );
 
-      const audio = new Audio(response.data.url);
-      audio.play();
+      const audioContent = response.data.audioContent;
+      const audio = new Audio(`data:audio/mp3;base64,${audioContent}`);
+
+      return new Promise((resolve) => {
+        audio.onended = resolve;
+        audio.play();
+      });
     } catch (error) {
-      if (error.response) {
-        if (error.response.status === 429) {
-          console.error('Rate limit exceeded. Please try again later.');
-        } else if (error.response.status === 400) {
-          console.error('Bad Request: Check your API parameters.');
-        } else {
-          console.error('Error using ApiHub TTS:', error.response.status, error.response.data);
-        }
-      } else if (error.request) {
-        console.error('No response from ApiHub:', error.request);
-      } else {
-        console.error('Error setting up the request:', error.message);
-      }
+      console.error('Error synthesizing speech:', error.response ? error.response.data : error.message);
     }
   };
 
@@ -131,11 +119,8 @@ const NewsApp = () => {
       return;
     }
 
-    for (let i = 0; i < headlines.length; i++) {
-      console.log('Reading:', headlines[i].title);
-      await speakWithApiHub(headlines[i].title);
-      
-      await new Promise(resolve => setTimeout(resolve, 2000));
+    for (const headline of headlines) {
+      await speak(headline.title);
     }
   };
 
@@ -153,8 +138,8 @@ const NewsApp = () => {
   return (
     <div className="news-app">
       <div className="header">
-        <FaRocket className="header-icon" /> {}
-        <h1 className="header-title">Techna AI</h1> {}
+        <FaRocket className="header-icon" />
+        <h1 className="header-title">Techna AI</h1>
       </div>
       <div className="news-container">
         {headlines.map((headline, index) => (
