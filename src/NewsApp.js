@@ -18,6 +18,7 @@ const apiKey = process.env.REACT_APP_GOOGLE_CLOUD_API_KEY; // Access the API key
 
 const NewsApp = () => {
   const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false); // New state to control speaking
   const [openedArticle, setOpenedArticle] = useState(null);
   const { transcript, resetTranscript } = useSpeechRecognition();
 
@@ -64,22 +65,57 @@ const NewsApp = () => {
     }
   ];
 
+  // Function to convert words to numbers
+  const wordsToNumbers = (word) => {
+    switch (word) {
+      case 'jedan':
+        return 1;
+      case 'dva':
+        return 2;
+      case 'tri':
+        return 3;
+      case 'četiri':
+        return 4;
+      case 'pet':
+        return 5;
+      case 'šest':
+        return 6;
+      case 'sedam':
+        return 7;
+      case 'osam':
+        return 8;
+      case 'devet':
+        return 9;
+      default:
+        return null;
+    }
+  };
+
   useEffect(() => {
     const lowerCaseTranscript = transcript.toLowerCase();
 
-    if (lowerCaseTranscript.includes('start')) {
+    if (lowerCaseTranscript.includes('čitaj')) {
       readHeadlinesAloud();
+      resetTranscript(); // Reset after recognizing 'start'
     } else if (lowerCaseTranscript.includes('stop')) {
       window.speechSynthesis.cancel();
+      setSpeaking(false); // Ensure speaking is stopped
+      resetTranscript(); // Reset after recognizing 'stop'
     } else if (lowerCaseTranscript.startsWith('otvori vijest')) {
-      const articleNumber = parseInt(lowerCaseTranscript.split(' ')[2], 10);
-      openArticle(articleNumber);
+      const parts = lowerCaseTranscript.split(' ');
+      const articleNumberWord = parts[2];
+      const articleNumber = parseInt(articleNumberWord, 10) || wordsToNumbers(articleNumberWord);
+
+      if (articleNumber) {
+        openArticle(articleNumber);
+        resetTranscript(); // Reset after opening article
+      }
     }
   }, [transcript, headlines, openedArticle]);
 
   const startListening = () => {
     setListening(true);
-    SpeechRecognition.startListening({ continuous: true });
+    SpeechRecognition.startListening({ continuous: true, language: 'sr' }); // Set the language to Serbian
   };
 
   const stopListening = () => {
@@ -89,6 +125,10 @@ const NewsApp = () => {
   };
 
   const speak = async (text) => {
+    if (speaking) return; // Prevent new speech if already speaking
+    setSpeaking(true);
+    window.speechSynthesis.cancel(); // Cancel any ongoing speech before starting a new one
+
     const requestBody = {
       input: { text: text },
       voice: { languageCode: 'sr-RS', name: 'sr-RS-Standard-A' },
@@ -105,11 +145,15 @@ const NewsApp = () => {
       const audio = new Audio(`data:audio/mp3;base64,${audioContent}`);
 
       return new Promise((resolve) => {
-        audio.onended = resolve;
+        audio.onended = () => {
+          setSpeaking(false); // Reset speaking state when finished
+          resolve();
+        };
         audio.play();
       });
     } catch (error) {
       console.error('Error synthesizing speech:', error.response ? error.response.data : error.message);
+      setSpeaking(false); // Reset speaking state if there is an error
     }
   };
 
